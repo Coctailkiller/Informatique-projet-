@@ -1,0 +1,219 @@
+#Base de données
+import uuid
+
+class Entreprise:
+    def __init__(self, nom, adresse, secteurs_activite):
+        self.id = uuid.uuid4()
+        self.nom = nom
+        self.adresse = adresse
+        self.secteurs_activite = secteurs_activite
+        self.offres = []
+
+    def ajouter_offre(self, offre):
+        self.offres.append(offre)
+
+    def modifier_offre(self, offre_id, nouvelle_offre):
+        for offre in self.offres:
+            if offre.id == offre_id:
+                offre.titre = nouvelle_offre.titre
+                offre.description = nouvelle_offre.description
+                offre.secteur_activite = nouvelle_offre.secteur_activite
+                offre.date_debut = nouvelle_offre.date_debut
+                offre.date_fin = nouvelle_offre.date_fin
+                offre.entreprise = nouvelle_offre.entreprise
+                return True
+        return False
+
+    def supprimer_offre(self, offre_id):
+        for offre in self.offres:
+            if offre.id == offre_id:
+                self.offres.remove(offre)
+                return True
+        return False
+
+    def modifier_informations(self, nom, adresse, secteurs_activite):
+        self.nom = nom
+        self.adresse = adresse
+        self.secteurs_activite = secteurs_activite
+
+    def notifier_eleves(self, stage_accepte):
+        for offre in self.offres:
+            for stage in offre.stages:
+                if stage == stage_accepte:
+                    for other_stage in offre.stages:
+                        if other_stage != stage_accepte:
+                            other_stage.eleve.notifier_refus()
+
+class Offre:
+    def __init__(self, titre, description, secteur_activite, date_debut, date_fin, entreprise):
+        self.id = uuid.uuid4()
+        self.titre = titre
+        self.description = description
+        self.secteur_activite = secteur_activite
+        self.date_debut = date_debut
+        self.date_fin = date_fin
+        self.entreprise = entreprise
+        self.stages = []
+
+    def accepter_postulation(self, stage):
+        stage.accepter()
+
+    def refuser_postulation(self, stage):
+        stage.refuser()
+
+class Stage:
+    def __init__(self, eleve, offre):
+        self.id = uuid.uuid4()
+        self.eleve = eleve
+        self.offre = offre
+        self.status = "en attente"
+
+    def accepter(self):
+        self.offre.accepter_stage(self)
+
+    def refuser(self):
+        self.status = "refuse"
+        self.eleve.notifier_refus()
+
+class Eleve:
+    def __init__(self, nom, prenom, email, annee_etude):
+        self.id = uuid.uuid4()
+        self.nom = nom
+        self.prenom = prenom
+        self.email = email
+        self.annee_etude = annee_etude
+        self.stages = []
+
+    def postuler_offre(self, offre):
+        stage = Stage(self, offre)
+        offre.stages.append(stage)
+        self.stages.append(stage)
+
+    def supprimer_candidature(self, stage_id):
+        for stage in self.stages:
+            if stage.id == stage_id:
+                self.stages.remove(stage)
+                return True
+        return False
+
+    def modifier_informations(self, nom, prenom, email, annee_etude):
+        self.nom = nom
+        self.prenom = prenom
+        self.email = email
+        self.annee_etude = annee_etude
+
+#Fonctions hors base de données ?? 
+utilisateurs = {}
+
+def inscription_eleve():
+    print("Inscription d'un nouvel élève")
+    nom = input("Entrez le nom de l'élève : ")
+    prenom = input("Entrez le prénom de l'élève : ")
+    email = input("Entrez l'email de l'élève : ")
+    annee_etude = input("Entrez l'année d'étude de l'élève : ")
+    eleve = Eleve(nom, prenom, email, annee_etude)
+    utilisateurs[eleve.id] = eleve  # Ajout de l'élève au dictionnaire
+    return eleve
+
+def inscription_entreprise():
+    print("Inscription d'une nouvelle entreprise")
+    nom = input("Entrez le nom de l'entreprise : ")
+    adresse = input("Entrez l'adresse de l'entreprise : ")
+    secteurs_activite = input("Entrez les secteurs d'activité de l'entreprise (séparés par des virgules) : ").split(',')
+    entreprise = Entreprise(nom, adresse, secteurs_activite)
+    utilisateurs[entreprise.id] = entreprise  # Ajout de l'entreprise au dictionnaire
+    return entreprise
+
+def creer_offre(entreprise):
+    print("\nCréation d'une nouvelle offre de stage")
+    titre = input("Entrez le titre de l'offre : ")
+    description = input("Entrez la description de l'offre : ")
+    secteur_activite = input("Entrez le secteur d'activité de l'offre : ")
+    date_debut = input("Entrez la date de début de l'offre : ")
+    date_fin = input("Entrez la date de fin de l'offre : ")
+    nouvelle_offre = Offre(titre, description, secteur_activite, date_debut, date_fin, entreprise)
+    entreprise.ajouter_offre(nouvelle_offre)
+    print("L'identifiant de l'offre est :", nouvelle_offre.id)
+    print("Offre de stage créée avec succès !")
+    
+    
+def modifier_offre(entreprise):
+    print("\nModification d'une offre de stage")
+    offre_id = input("Entrez l'ID de l'offre à modifier : ")
+    for offre in entreprise.offres:
+        if str(offre.id) == offre_id:
+            titre = input("Entrez le nouveau titre de l'offre : ")
+            description = input("Entrez la nouvelle description de l'offre : ")
+            secteur_activite = input("Entrez le nouveau secteur d'activité de l'offre : ")
+            date_debut = input("Entrez la nouvelle date de début de l'offre : ")
+            date_fin = input("Entrez la nouvelle date de fin de l'offre : ")
+            nouvelle_offre = Offre(titre, description, secteur_activite, date_debut, date_fin, entreprise)
+            entreprise.modifier_offre(offre.id, nouvelle_offre)
+            print("Offre de stage modifiée avec succès !")
+            return
+    print("L'offre spécifiée n'a pas été trouvée.")
+
+def supprimer_offre(entreprise):
+    print("\nSuppression d'une offre de stage")
+    offre_id = input("Entrez l'ID de l'offre à supprimer : ")
+    if entreprise.supprimer_offre(offre_id):
+        print("Offre de stage supprimée avec succès !")
+    else:
+        print("L'offre spécifiée n'a pas été trouvée.")
+
+def modifier_informations_entreprise(entreprise):
+    print("\nModification des informations de l'entreprise")
+    nom = input("Entrez le nouveau nom de l'entreprise : ")
+    adresse = input("Entrez la nouvelle adresse de l'entreprise : ")
+    secteurs_activite = input("Entrez les nouveaux secteurs d'activité de l'entreprise (séparés par des virgules) : ").split(',')
+    entreprise.modifier_informations(nom, adresse, secteurs_activite)
+    print("Informations de l'entreprise modifiées avec succès !")
+
+# Programme principal
+def main():
+    while True:
+        print("\nBienvenue ! Que souhaitez-vous faire ?")
+        print("1. S'inscrire en tant qu'élève")
+        print("2. S'inscrire en tant qu'entreprise")
+        print("3. Quitter")
+        choix = input("Entrez votre choix : ")
+
+        if choix == "1":
+            eleve = inscription_eleve()
+            print("Inscription de l'élève réussie !")
+            # Ajouter ici les fonctionnalités pour gérer l'élève
+
+        elif choix == "2":
+            entreprise = inscription_entreprise()
+            print("Inscription de l'entreprise réussie !")
+            # Ajouter ici les fonctionnalités pour gérer l'entreprise
+            while True:
+                print("\nMenu Entreprise :")
+                print("1. Créer une offre de stage")
+                print("2. Modifier une offre de stage")
+                print("3. Supprimer une offre de stage")
+                print("4. Modifier les informations de l'entreprise")
+                print("5. Retour au menu principal")
+                choix_entreprise = input("Entrez votre choix : ")
+                if choix_entreprise == "1":
+                    creer_offre(entreprise)
+                elif choix_entreprise == "2":
+                    modifier_offre(entreprise)
+                elif choix_entreprise == "3":
+                    supprimer_offre(entreprise)
+                elif choix_entreprise == "4":
+                    modifier_informations_entreprise(entreprise)
+                elif choix_entreprise == "5":
+                    break
+                else:
+                    print("Choix invalide. Veuillez entrer un nombre entre 1 et 5.")
+
+        elif choix == "3":
+            print("Merci d'avoir utilisé notre programme. À bientôt !")
+            break
+
+        else:
+            print("Choix invalide. Veuillez entrer un nombre entre 1 et 3.")
+
+if __name__ == "__main__":
+    main()
